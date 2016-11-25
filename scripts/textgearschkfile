@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+ 
+import sys
+import json
+import requests
+
+def text_error_cols_message(text,key):
+    url='https://api.textgears.com/check.php?key='+key+'&text='+text
+    response = requests.get(url)
+    resj=response.json()
+    if 'errors' in resj:
+        return [ [er['offset'],er['offset']+er['length'],"=> {0}".format(" | ".join(er['better']) )]  for er in resj['errors'] ]
+    else :
+        return []
+        
+
+
+if __name__ == '__main__':
+
+    print(sys.argv)
+    fname, key  = sys.argv[1:3]
+    with open(fname) as f:
+        texts = f.readlines()
+        for i,text in enumerate(texts):
+            if len(text)>0:
+                cols=text_error_cols_message(text,key)
+                for col in cols:
+                    print(fname+":"+str(i+1)+":"+str(col[0]+1)+": "+col[2])
+    
+
+

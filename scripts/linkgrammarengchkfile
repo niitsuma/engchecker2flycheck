@@ -1,0 +1,113 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+
+#http://qiita.com/niitsuma/items/80543890ce268109ffb4
+
+import sys
+
+from linkgrammar import Sentence, ParseOptions, Dictionary, Clinkgrammar as clg
+import re
+
+def is_no_link_ward(w):
+    """
+    >>> is_no_link_ward("[1234]")
+    False
+    >>> is_no_link_ward("[aBcD1234]")
+    'aBcD1234'
+    """
+    l=re.findall(r"\[\d+\]",w)
+    if len(l)==1 and l[0]==w:
+        return False
+    else:
+        l=re.findall(r"\[[^\[\]]+\]",w)
+        if len(l)==1 and l[0]==w:
+            return l[0][1:-1]
+        else:
+            return False
+
+def text_words2col_begin_end(text,words):
+    """
+    >>> text='This is a the test of bfgiuing and xxxvfrg'
+    >>> words=['LEFT-WALL', 'this.p', 'is.v', '[a]', 'the', 'test.n', 'of', 'bfgiuing[!].g', 'and.j-n', 'xxxvfrg[?].n', 'RIGHT-WALL']
+    >>> text_words2col_begin_end(text,words)
+    [[0, 4], [5, 7], [8, 9], [10, 13], [14, 18], [19, 21], [22, 30], [31, 34], [35, 42]]
+    """
+    t=text.lower()
+    j=0
+    jlis=[]
+    for k,w in enumerate(words[1:-1]):
+        j0=j
+        w2=is_no_link_ward(w)
+        if not(w2):
+            w3=w
+        else:
+            w3=w2
+        for c in w3.lower():
+            if len(t)==0:
+                break
+            if t[0]==c:
+                t=t[1:]
+                j+=1
+            else:
+                break
+        j1=j
+        jlis.append([j0,j1])
+        while len(t)>0 and re.match(r"\s+",t) is not None:
+            t=t[1:]
+            j+=1
+    return jlis
+
+# def desc(lkg):
+#     print(lkg.unused_word_cost())
+#     print(lkg.disjunct_cost())
+#     ws=[w for w in lkg.words()]
+#     print(ws)
+#     print [l for l in lkg.links()]
+
+
+def text_error_cols(text):
+    """
+    >>> text='This is a the test of bfgiuing and xxxvfrg'
+    >>> text_error_cols(text)
+    [[8, 9], [10, 13]]
+    """ 
+    po = ParseOptions(min_null_count=0, max_null_count=999)
+    en_dir = Dictionary() # open the dictionary only once
+    sent = Sentence(text, en_dir, po)
+    linkages = sent.parse()
+    if sent.null_count() == 0 :
+        return []
+    else:
+        error_cols=[]
+        iws=[]
+        for lkg in linkages:
+            words=[w for w in lkg.words()]
+            #desc(lkg)
+            for k,w in enumerate(words):
+                if is_no_link_ward(w):
+                    if k in iws:
+                        break
+                    else:
+                        iws.append(k)
+                        js=text_words2col_begin_end(text,words)
+                        error_cols.append(js[k-1])
+        return error_cols
+
+
+
+if __name__ == '__main__':
+    #import doctest
+    #doctest.testmod()
+    fname = sys.argv[1]
+    with open(fname) as f:
+        texts = f.readlines()
+        for i,text in enumerate(texts):
+            if len(text)>0:
+                cols=text_error_cols(text)
+                for col in cols:
+                    print(fname+":"+str(i+1)+":"+str(col[0]+1)+": linkerror")
+
+    
+    
+    

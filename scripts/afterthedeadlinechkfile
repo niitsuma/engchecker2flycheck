@@ -1,0 +1,35 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+import re
+import sys
+
+#import ATD
+import engchecker2flycheck.afterthedeadlineapiclient as ATD
+
+#ATD.setDefaultKey("key")
+
+def text_error_cols_message(text):
+    errors = ATD.checkDocument(text)
+    return sum(
+        [[[m.start(),m.end(),
+           "=> {0} ; {1}".format(" | ".join(error.suggestions), error.type)
+           ] for m in re.finditer(error.string,text)]
+        for error in errors],[])
+
+if __name__ == '__main__':
+    #import doctest
+    #doctest.testmod()
+
+    ATD.setDefaultKey('key')
+    ATD.set_server_address("localhost:1049")
+
+    fname = sys.argv[1]
+    with open(fname) as f:
+        texts = f.readlines()
+        for i,text in enumerate(texts):
+            if len(text)>0:
+                cols=text_error_cols_message(text)
+                for col in cols:
+                    print(fname+":"+str(i+1)+":"+str(col[0]+1)+": "+col[2])
+    
